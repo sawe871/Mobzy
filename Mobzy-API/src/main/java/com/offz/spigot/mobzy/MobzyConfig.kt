@@ -1,8 +1,10 @@
 package com.offz.spigot.mobzy
 
-import com.offz.spigot.mobzy.CustomType.Companion.types
+import com.mineinabyss.idofront.messaging.logError
+import com.mineinabyss.idofront.messaging.logInfo
 import com.offz.spigot.mobzy.spawning.SpawnRegistry.readCfg
 import com.offz.spigot.mobzy.spawning.SpawnRegistry.unregisterAll
+import net.minecraft.server.v1_15_R1.EnumCreatureType
 import org.bukkit.ChatColor
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
@@ -16,11 +18,6 @@ class MobzyConfig {
     val spawnCfgs: MutableMap<File, FileConfiguration> = HashMap()
     val mobCfgs: MutableMap<File, FileConfiguration> = HashMap()
     val creatureTypes: List<String> = listOf("MONSTER", "CREATURE", "AMBIENT", "WATER_CREATURE", "MISC")
-//TODO remove commented
-
-//    fun registerMobType(name: String?, type: Class<out Entity?>) {
-//        registeredMobTypes[name] = type
-//    }
 
     /**
      * Reads the configuration values from the plugin's config.yml file
@@ -55,7 +52,7 @@ class MobzyConfig {
      * @param plugin the plugin this file corresponds to
      */
     fun registerMobCfg(file: File, plugin: JavaPlugin) {
-        if(plugin !is MobzyAddon) error("Cannot register $plugin, it is not a MobzyAddon")
+        if (plugin !is MobzyAddon) error("Cannot register $plugin, it is not a MobzyAddon")
         registerCfg(mobCfgs, file, plugin)
         if (!registeredAddons.contains(plugin)) registeredAddons.add(plugin as MobzyAddon)
         logInfo("Registered addons: $registeredAddons")
@@ -89,13 +86,14 @@ class MobzyConfig {
      * Reload the configurations stored in the plugin. Most stuff requires a full reload of the plugin now
      */
     fun reload() {
-        types.clear()
+        mobzy.customTypes.reload()
         logInfo("Registered addons: $registeredAddons")
         registeredAddons.forEach { it.registerWithMobzy(mobzy) }
         loadConfigValues()
         reloadConfigurationMap(mobCfgs)
         unregisterAll()
         reloadConfigurationMap(spawnCfgs)
+        mobzy.registerSpawnTask()
     }
 
     /**
@@ -119,33 +117,34 @@ class MobzyConfig {
      * @property doMobSpawns whether custom mob spawning enabled
      */
     companion object {
-        var isDebug = false
-            private set
+        var isDebug = false; private set
         var doMobSpawns = false
-            private set
-        var spawnSearchRadius = 0.0
-            private set
-        var minChunkSpawnRad = 0
-            private set
-        var maxChunkSpawnRad = 0
-            private set
-        var maxSpawnAmount = 0
-            private set
-        var spawnTaskDelay = 0L
-            private set
+            set(enabled) {
+                if (enabled && !doMobSpawns) {
+                    field = true
+                    mobzy.config.set("doMobSpawns", true)
+                    mobzy.saveConfig()
+                    mobzy.registerSpawnTask()
+                } else if (!enabled && doMobSpawns) {
+                    field = false
+                    mobzy.config.set("doMobSpawns", false)
+                    mobzy.saveConfig()
+                    mobzy.registerSpawnTask()
+                }
+            }
+        var spawnSearchRadius = 0.0; private set
+        var minChunkSpawnRad = 0; private set
+        var maxChunkSpawnRad = 0; private set
+        var maxSpawnAmount = 0; private set
+        var spawnTaskDelay = 0L; private set
         private val mobCaps: MutableMap<String, Int> = HashMap()
 
         /**
-         * @param type a specific mob type
-         * @return the registered mob cap for that mob
+         * @param creatureType The name of the [EnumCreatureType].
+         * @return The mob cap for that mob in config.
          */
-        fun getMobCap(creatureType: String): Int {
-            return mobCaps[creatureType] ?: error("could not find mob cap for $creatureType")
-        }
+        fun getMobCap(creatureType: String): Int =
+                mobCaps[creatureType] ?: error("could not find mob cap for $creatureType")
 
-    }
-
-    init {
-        reload()
     }
 }

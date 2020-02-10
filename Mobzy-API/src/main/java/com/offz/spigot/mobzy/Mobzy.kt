@@ -1,9 +1,7 @@
 package com.offz.spigot.mobzy
 
 import com.derongan.minecraft.guiy.GuiListener
-import com.offz.spigot.mobzy.CustomType.Companion.getType
-import com.offz.spigot.mobzy.CustomType.Companion.registerTypes
-import com.offz.spigot.mobzy.CustomType.Companion.spawnEntity
+import com.mineinabyss.idofront.entities.toNMS
 import com.offz.spigot.mobzy.listener.MobListener
 import com.offz.spigot.mobzy.mobs.CustomMob
 import com.offz.spigot.mobzy.spawning.SpawnTask
@@ -16,11 +14,13 @@ import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.plugin.java.JavaPlugin
 
-lateinit var mobzy: Mobzy
-    private set
+val mobzy: Mobzy
+    get() = JavaPlugin.getPlugin(Mobzy::class.java)
 
 class Mobzy : JavaPlugin() {
     lateinit var mobzyConfig: MobzyConfig
+        private set
+    lateinit var customTypes: CustomType
         private set
     private lateinit var context: MobzyContext
 
@@ -54,12 +54,12 @@ class Mobzy : JavaPlugin() {
     }
 
     override fun onEnable() {
-        mobzy = this
         logger.info("On enable has been called")
         saveDefaultConfig()
-        mobzyConfig = MobzyConfig()
         reloadConfig()
-        registerTypes() //not clean but mob ids need to be registered with the server on startup or the mobs get removed
+        customTypes = CustomType() //TODO better name for class
+        mobzyConfig = MobzyConfig()
+        mobzyConfig.reload() //lots of startup logic in here
 
         //Plugin startup logic
         context = MobzyContext(config, mobzyConfig) //Create new context and add plugin and logger to it
@@ -70,12 +70,6 @@ class Mobzy : JavaPlugin() {
         server.pluginManager.registerEvents(MobListener(context), this)
         server.pluginManager.registerEvents(GuiListener(this), this)
 
-        //Register repeating tasks
-        if (MobzyConfig.doMobSpawns) {
-            val spawnTask: Runnable = SpawnTask()
-            server.scheduler.scheduleSyncRepeatingTask(this, spawnTask, 0, MobzyConfig.spawnTaskDelay)
-        }
-
         //Reload existing addons
         /*getLogger().info("Reloading addons: " + getConfig().getStringList(REGISTERED_ADDONS_KEY));
         for (String name : getConfig().getStringList(REGISTERED_ADDONS_KEY)) {
@@ -85,8 +79,20 @@ class Mobzy : JavaPlugin() {
                 ((MobzyAddon) addon).registerWithMobzy(this);
         }*/
 
-        val commandExecutor = MobzyCommands(context)
-        getCommand("mobzy")!!.setExecutor(commandExecutor)
+        //Register commands
+        MobzyCommands(context)
+    }
+
+    private var spawnTaskID = -1
+
+    fun registerSpawnTask() {
+        server.scheduler.cancelTask(spawnTaskID)
+        spawnTaskID = -1
+
+        if (MobzyConfig.doMobSpawns) {
+            val spawnTask: Runnable = SpawnTask()
+            spawnTaskID = server.scheduler.scheduleSyncRepeatingTask(this, spawnTask, 0, MobzyConfig.spawnTaskDelay)
+        }
     }
 
     /**
@@ -101,7 +107,7 @@ class Mobzy : JavaPlugin() {
                 if (it.scoreboardTags.contains("additionalPart")) it.remove().also { return@filter false }
                 it.scoreboardTags.contains("customMob2") && it.toNMS() !is CustomMob
             }.forEach {
-                val replacement = spawnEntity(getType(it.scoreboardTags), it.location)!!.toNMS<EntityLiving>()
+                val replacement = it.location.spawnEntity((it.scoreboardTags).toEntityType())!!.toNMS<EntityLiving>()
                 val nbt = NBTTagCompound()
                 it.toNMS<EntityLiving>().b(nbt) //.b copies over the entity's nbt data to the compound
                 it.remove()
@@ -115,6 +121,7 @@ class Mobzy : JavaPlugin() {
     override fun onDisable() { // Plugin shutdown logic
         super.onDisable()
         logger.info("onDisable has been invoked!")
+        server.scheduler.cancelTasks(this)
         //        Bukkit.broadcastMessage("Saving addons " + mobzyConfig.getRegisteredAddons().toString());
 //        getConfig().set(REGISTERED_ADDONS_KEY, mobzyConfig.getRegisteredAddons().stream().map(addon -> ((Plugin) addon).getName()).collect(Collectors.toList()));
 //        saveConfig();

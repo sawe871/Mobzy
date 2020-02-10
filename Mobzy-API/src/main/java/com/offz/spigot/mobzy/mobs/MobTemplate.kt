@@ -1,7 +1,7 @@
 package com.offz.spigot.mobzy.mobs
 
-import com.offz.spigot.mobzy.damage
-import com.offz.spigot.mobzy.editItemMeta
+import com.mineinabyss.idofront.items.damage
+import com.mineinabyss.idofront.items.editItemMeta
 import me.libraryaddict.disguise.disguisetypes.DisguiseType
 import org.bukkit.Material
 import org.bukkit.configuration.serialization.ConfigurationSerializable
@@ -26,7 +26,6 @@ data class MobTemplate(var name: String,
                        var isAdult: Boolean = true,
                        var deathCommands: List<String> = ArrayList(),
                        var drops: List<MobDrop> = ArrayList()) : ConfigurationSerializable {
-    constructor(aName: String, aModelID: Int) : this(name = aName, modelID = aModelID)
 
     fun chooseDrops(): List<ItemStack?> = drops.toList().map { it.chooseDrop() }
 
@@ -47,16 +46,16 @@ data class MobTemplate(var name: String,
     }
 
     companion object {
+        @Suppress("UNCHECKED_CAST")
         fun deserialize(args: Map<String?, Any?>, name: String): MobTemplate {
             fun setArg(name: String, setValue: (Any) -> Unit) {
                 if (args.containsKey(name))
                     setValue(args[name] ?: error("Failed to parse argument while serializing MobTemplate"))
             }
 
+            val configName = if (args.containsKey("name")) args["name"] as String else name
 
-            val name = if (args.containsKey("name")) args["name"] as String else name
-
-            val template = MobTemplate(name, args["model"] as Int)
+            val template = MobTemplate(configName, args["model"] as Int)
             setArg("adult") { template.isAdult = it as Boolean }
             setArg("disguise-as") { template.disguiseAs = DisguiseType.valueOf(it as String) }
             setArg("drops") { drops ->
