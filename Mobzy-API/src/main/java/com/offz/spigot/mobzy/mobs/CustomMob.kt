@@ -4,9 +4,6 @@ import com.offz.spigot.mobzy.debug
 import com.offz.spigot.mobzy.mobTemplate
 import com.offz.spigot.mobzy.mobs.types.FlyingMob
 import com.offz.spigot.mobzy.pathfinders.Navigation
-import me.libraryaddict.disguise.DisguiseAPI
-import me.libraryaddict.disguise.disguisetypes.Disguise
-import me.libraryaddict.disguise.disguisetypes.MobDisguise
 import net.minecraft.server.v1_15_R1.*
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
@@ -16,6 +13,8 @@ import org.bukkit.craftbukkit.v1_15_R1.CraftWorld
 import org.bukkit.craftbukkit.v1_15_R1.event.CraftEventFactory
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import kotlin.random.Random
 
 
@@ -71,15 +70,16 @@ interface CustomMob {
      * identifier scoreboard tag
      */
     fun createFromBase() {
-        entity.expToDrop = 3
-        entity.addScoreboardTag("customMob2")
-        entity.addScoreboardTag(template.name)
+//        entity.expToDrop = 3
+        living.addScoreboardTag("customMob2")
+        living.addScoreboardTag(template.name)
 
         //create an item based on model ID in head slot if entity will be using itself for the model
         living.equipment!!.helmet = template.modelItemStack
+        living.addPotionEffect(PotionEffect(PotionEffectType.INVISIBILITY, Int.MAX_VALUE, 1, false, false))
 
         //disguise the entity
-        DisguiseAPI.disguiseEntity(entity.bukkitEntity, MobDisguise(template.disguiseAs, template.isAdult).also { it.watcher.isInvisible = true })
+//        DisguiseAPI.disguiseEntity(entity.bukkitEntity, MobDisguise(template.disguiseAs, template.isAdult).also { it.watcher.isInvisible = true })
     }
 
     fun setConfiguredAttributes() {
@@ -122,18 +122,6 @@ interface CustomMob {
     fun makeSound(sound: String?) {
         if (sound != null)
             living.world.playSound(location, sound, SoundCategory.NEUTRAL, 1f, (Random.nextDouble(1.0, 1.02).toFloat()))
-    }
-
-    fun disguise() {
-        if (!DisguiseAPI.isDisguised(living)) { //if not disguised
-            val disguise: Disguise = MobDisguise(template.disguiseAs, template.isAdult)
-            DisguiseAPI.disguiseEntity(living, disguise)
-            disguise.watcher.isInvisible = true
-        }
-    }
-
-    fun undisguise() {
-        DisguiseAPI.getDisguises(living).forEach { it.removeDisguise() }
     }
 
     // ========== Helper methods ===================

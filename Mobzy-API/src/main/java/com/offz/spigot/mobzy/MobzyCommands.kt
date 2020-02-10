@@ -10,7 +10,6 @@ import com.offz.spigot.mobzy.gui.MobzyGUI
 import com.offz.spigot.mobzy.mobs.types.FlyingMob
 import com.offz.spigot.mobzy.mobs.types.HostileMob
 import com.offz.spigot.mobzy.mobs.types.PassiveMob
-import me.libraryaddict.disguise.utilities.DisguiseUtilities
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -35,16 +34,10 @@ class MobzyCommands internal constructor(private val context: MobzyContext) : Id
                     sender.info("Reloaded config files (not necessarily successfully) :p")
                 }
             }
-            command("libsdisguisesstats") {
-                onExecute {
-                    sender.info("${DisguiseUtilities.getDisguises().count()} disguises in use")
-                }
-            }
 
             commandGroup {
                 val entityType = StringArgument(1, "entity type")
                 val radius = IntArgument(2, "radius", default = 0).apply { ensureChangedByPlayer() } //TODO cleaner way of doing this
-
                 fun Execution.removeOrInfo(isInfo: Boolean) {
                     val worlds = mobzy.server.worlds
                     var mobCount = 0
@@ -130,7 +123,7 @@ class MobzyCommands internal constructor(private val context: MobzyContext) : Id
     //TODO make the API do tab completion
     override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<String>): List<String> {
         if (command.name != "mobzy") return emptyList()
-        if (args.size <= 1) return listOf("spawn", "info", "remove", "reload", "fullreload", "i", "rm", "s", "config", "libsdisguisesstats")
+        if (args.size <= 1) return listOf("spawn", "info", "remove", "reload", "fullreload", "i", "rm", "s", "config")
                 .filter { it.startsWith(args[0]) }
         val subCommand = args[0]
         if (subCommand == "spawn" || subCommand == "s")
