@@ -1,0 +1,15 @@
+name: Mobzy
+version: @plugin_version@
+author: Offz
+main: com.mineinabyss.mobzy.Mobzy
+api-version: 1.15
+depend: [WorldGuard, ProtocolLib]
+
+prefix: Mobzy
+description: A custom entities API
+
+commands:
+  mobzy:
+    aliases: [mz, mobzy]
+    description: The main mobzy command
+    usage: /mobzy [sub command]
